@@ -10,7 +10,7 @@ variables:
 steps:
 
 # ==========================================
-# 1. Check Java
+# 1. Check Java and Maven
 # ==========================================
 
 - script: |
@@ -21,11 +21,11 @@ steps:
 
 
 # ==========================================
-# 2. Maven Build
+# 2. Maven Build + Unit Tests
 # ==========================================
 
 - task: Maven@4
-  displayName: 'Maven Build'
+  displayName: 'Maven Build and Test'
   inputs:
     mavenPomFile: 'pom.xml'
     goals: 'clean package'
@@ -39,7 +39,48 @@ steps:
 
 
 # ==========================================
-# 3. Publish JAR
+# 3. Prepare SonarQube
+# ==========================================
+
+- task: SonarQubePrepare@7
+  displayName: 'Prepare SonarQube Analysis'
+  inputs:
+    SonarQube: 'sonarqube-connection'
+    scannerMode: 'other'
+    extraProperties: |
+      sonar.projectKey=demo-app
+      sonar.projectName=demo-app
+      sonar.java.binaries=target/classes
+
+
+# ==========================================
+# 4. Run SonarQube Analysis
+# ==========================================
+
+- task: Maven@4
+  displayName: 'SonarQube Code Analysis'
+  inputs:
+    mavenPomFile: 'pom.xml'
+    goals: 'sonar:sonar'
+    options: '-DskipTests=false'
+    javaHomeOption: 'JDKVersion'
+    jdkVersionOption: '1.17'
+    mavenVersionOption: 'Default'
+    mavenAuthenticateFeed: false
+
+
+# ==========================================
+# 5. Publish SonarQube Quality Gate
+# ==========================================
+
+- task: SonarQubePublish@7
+  displayName: 'Publish SonarQube Results'
+  inputs:
+    pollingTimeoutSec: '300'
+
+
+# ==========================================
+# 6. Publish Application JAR
 # ==========================================
 
 - task: PublishPipelineArtifact@1
